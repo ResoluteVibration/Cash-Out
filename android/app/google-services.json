@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "521561907673",
+    "project_id": "cash-out-f5c4c",
+    "storage_bucket": "cash-out-f5c4c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:521561907673:android:e9cf387eae947f240879c8",
+        "android_client_info": {
+          "package_name": "com.example.cash_out"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHaFbDF4-ciYtgS7HOdSYQjfBvGAMO80M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
