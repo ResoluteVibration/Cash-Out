@@ -3,16 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../color schemes/blue.dart';
 import '../models/user.dart';
-import 'dart:convert';
+import '../models/enums.dart';
 
 class UserProvider with ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-
   UserModel? _currentUser;
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
 
-  // Always default to Blue theme
   final ThemeData _currentTheme = buildBlueTheme();
   ThemeData get currentTheme => _currentTheme;
 
@@ -20,7 +18,6 @@ class UserProvider with ChangeNotifier {
     _loadUserFromPrefs();
   }
 
-  /// Login with email and password
   Future<bool> login(String email, String password) async {
     final q = await _db
         .collection('users')
@@ -38,55 +35,126 @@ class UserProvider with ChangeNotifier {
     return false;
   }
 
-  /// Register user with initial amount = 0
   Future<void> register(UserModel user) async {
     final docRef = _db.collection('users').doc();
     final newUser = user.copyWith(
       id: docRef.id,
-      amount: 0.0,
+      amount: 0.0, // Initial amount is 0
     );
-
     await docRef.set(newUser.toMap());
-
     _currentUser = newUser;
-    await _saveUserIdToPrefs(_currentUser!.id);
+    await _saveUserIdToPrefs(newUser.id);
     notifyListeners();
   }
 
-  /// Logout user
   Future<void> signOut() async {
     _currentUser = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('currentUserId');
+    prefs.remove('currentUserId');
     notifyListeners();
   }
 
-  /// Set user directly (used after registration)
   Future<void> setUser(UserModel user) async {
     _currentUser = user;
     await _saveUserIdToPrefs(user.id);
     notifyListeners();
   }
 
-  /// Update user's amount
   Future<void> updateAmount(double newAmount) async {
     if (_currentUser == null) return;
-
     _currentUser = _currentUser!.copyWith(amount: newAmount);
     notifyListeners();
-
     await _db.collection('users').doc(_currentUser!.id).update({
       'amount': newAmount,
     });
   }
 
-  /// Save user ID to SharedPreferences for session persistence
+  Future<void> updateBalance(double amount, String transactionType) async {
+    if (_currentUser == null) return;
+
+    double newBalance = _currentUser!.amount;
+    if (transactionType == TransactionType.Income.name) {
+      newBalance += amount;
+    } else if (transactionType == TransactionType.Expense.name) {
+      newBalance -= amount;
+    }
+
+    await updateAmount(newBalance);
+  }
+
+  Future<void> updateUserPassword({required String oldPassword, required String newPassword}) async {
+    if (_currentUser == null) return;
+
+    if (oldPassword != _currentUser!.password) {
+      throw Exception('Incorrect old password.');
+    }
+
+    await _db.collection('users').doc(_currentUser!.id).update({
+      'password': newPassword,
+    });
+    // Update local user model
+    _currentUser = _currentUser!.copyWith(password: newPassword);
+    notifyListeners();
+  }
+
+  Future<void> updateUserProfile({
+    String? firstname,
+    String? lastname,
+    String? email,
+    double? amount,
+    required String password, // 🔹 Added password parameter for validation
+  }) async {
+    if (_currentUser == null) return;
+
+    // 🔹 Validate the password before proceeding with the update
+    if (password != _currentUser!.password) {
+      throw Exception('Incorrect password. Profile not updated.');
+    }
+
+    final updatedData = <String, dynamic>{};
+    if (firstname != null) {
+      updatedData['firstname'] = firstname;
+    }
+    if (lastname != null) {
+      updatedData['lastname'] = lastname;
+    }
+    if (email != null && email.trim().isNotEmpty) {
+      if (email != _currentUser!.email) {
+        final existingUser = await _db
+            .collection('users')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get();
+
+        if (existingUser.docs.isNotEmpty) {
+          throw Exception('Email already exists. Please use a different one.');
+        }
+      }
+      updatedData['email'] = email;
+    }
+    if (amount != null) {
+      updatedData['amount'] = amount;
+    }
+
+    if (updatedData.isNotEmpty) {
+      await _db.collection('users').doc(_currentUser!.id).update(updatedData);
+
+      // Update local user model
+      _currentUser = _currentUser!.copyWith(
+        firstname: firstname,
+        lastname: lastname,
+        email: email,
+        amount: amount,
+      );
+      notifyListeners();
+    }
+  }
+
   Future<void> _saveUserIdToPrefs(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setString('currentUserId', userId);
   }
 
-  /// Load user from SharedPreferences on app start
   Future<void> _loadUserFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('currentUserId');
@@ -95,8 +163,6 @@ class UserProvider with ChangeNotifier {
       if (userDoc.exists) {
         _currentUser = UserModel.fromDoc(userDoc);
         notifyListeners();
-      } else {
-        await prefs.remove('currentUserId');
       }
     }
   }

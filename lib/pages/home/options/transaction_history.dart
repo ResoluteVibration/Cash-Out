@@ -22,6 +22,11 @@ class TransactionHistoryPage extends StatelessWidget {
         ),
         backgroundColor: colors.primary,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(30.0),
+          ),
+        ),
       ),
       body: Consumer<TransactionProvider>(
         builder: (context, provider, child) {

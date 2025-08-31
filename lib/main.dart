@@ -5,9 +5,8 @@ import 'firebase_options.dart';
 
 import 'providers/user_provider.dart';
 import 'providers/transaction_provider.dart';
-import 'providers/contact_provider.dart';
-
 import 'pages/welcome.dart';
+import 'pages/home/home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +32,6 @@ class CashOutApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (context) => TransactionProvider(context)),
-        ChangeNotifierProvider(create: (context) => ContactProvider()),
       ],
       child: const AppWithTheme(),
     );
@@ -47,11 +45,13 @@ class AppWithTheme extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
+        final initialPage = userProvider.isLoggedIn ? const HomePage() : const WelcomePage();
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Cash Out',
           theme: userProvider.currentTheme,
-          home: const WelcomePage(),
+          home: initialPage,
         );
       },
     );

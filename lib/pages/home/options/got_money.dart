@@ -17,6 +17,7 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
   final _descriptionController = TextEditingController();
 
   TransactionMode? _selectedMode;
+  TransactionCategory? _selectedCategory;
   bool _isLoading = false;
 
   @override
@@ -35,9 +36,11 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
     final user = userProvider.currentUser;
 
     if (user == null || amount <= 0 || _selectedMode == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill out all required fields.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login to access this feature.')),
+        );
+      }
       return;
     }
 
@@ -48,34 +51,36 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
     try {
       final txn = TransactionModel(
         id: '', // Firestore will generate
-        userId: user.id!,
-        contactId: null,
-        type: 'Income',
+        userId: user.id,
+        type: TransactionType.Income.name,
         amount: amount,
         description: description.isEmpty ? null : description,
         date: DateTime.now(),
         mode: _selectedMode!.name,
-        category: TransactionCategory.Savings.name, // Category is now set to Savings by default
+        category: _selectedCategory?.name ?? 'General',
       );
 
       await transactionProvider.addTransaction(txn);
+      await userProvider.updateBalance(amount, TransactionType.Income.name);
 
-      final newAmount = (user.amount ?? 0) + amount;
-      await userProvider.updateAmount(newAmount);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Income added successfully!')),
-      );
-
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Income added successfully!')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to add income: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add income: ${e.toString()}')),
+        );
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -89,6 +94,11 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
       appBar: AppBar(
         backgroundColor: colors.primary,
         title: Text('Got Money', style: TextStyle(color: colors.onPrimary)),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            bottom: Radius.circular(30.0),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -96,8 +106,10 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildAmountInput(colors),
-            const SizedBox(height: 24.0),
+            const SizedBox(height: 16.0),
             _buildDescriptionInput(colors),
+            const SizedBox(height: 16.0),
+            _buildCategoryDropdown(colors),
             const SizedBox(height: 16.0),
             _buildModeDropdown(colors),
             const SizedBox(height: 24.0),
@@ -109,31 +121,66 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
   }
 
   Widget _buildAmountInput(ColorScheme colors) {
-    return TextField(
+    return TextFormField(
       controller: _amountController,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(
         labelText: 'Amount',
-        labelStyle: TextStyle(color: colors.onSurface),
-        prefixIcon: Icon(Icons.attach_money, color: colors.onSurface),
+        labelStyle: TextStyle(color: colors.onSurfaceVariant),
+        prefixIcon: Icon(Icons.currency_rupee, color: colors.onSurface),
         filled: true,
-        fillColor: colors.surfaceVariant,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide.none),
+        fillColor: colors.surfaceVariant.withOpacity(0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide.none,
+        ),
       ),
-      style: TextStyle(color: colors.onSurface, fontSize: 24.0, fontWeight: FontWeight.bold),
     );
   }
 
   Widget _buildDescriptionInput(ColorScheme colors) {
-    return TextField(
+    return TextFormField(
       controller: _descriptionController,
       decoration: InputDecoration(
         labelText: 'Description (Optional)',
-        labelStyle: TextStyle(color: colors.onSurface),
+        labelStyle: TextStyle(color: colors.onSurfaceVariant),
         prefixIcon: Icon(Icons.description, color: colors.onSurface),
         filled: true,
-        fillColor: colors.surfaceVariant,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12.0), borderSide: BorderSide.none),
+        fillColor: colors.surfaceVariant.withOpacity(0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryDropdown(ColorScheme colors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<TransactionCategory>(
+          isExpanded: true,
+          hint: Row(
+            children: [
+              Icon(Icons.category, color: colors.onSurface),
+              const SizedBox(width: 8),
+              Text('Select Category', style: TextStyle(color: colors.onSurfaceVariant)),
+            ],
+          ),
+          value: _selectedCategory,
+          items: TransactionCategory.values.map((category) {
+            return DropdownMenuItem<TransactionCategory>(
+              value: category,
+              child: Text(category.name, style: TextStyle(color: colors.onSurface)),
+            );
+          }).toList(),
+          onChanged: (category) => setState(() => _selectedCategory = category),
+        ),
       ),
     );
   }
@@ -148,7 +195,13 @@ class _GotMoneyPageState extends State<GotMoneyPage> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<TransactionMode>(
           isExpanded: true,
-          hint: Text('Select Mode', style: TextStyle(color: colors.onSurfaceVariant)),
+          hint: Row(
+            children: [
+              Icon(Icons.payment, color: colors.onSurface),
+              const SizedBox(width: 8),
+              Text('Select Mode', style: TextStyle(color: colors.onSurfaceVariant)),
+            ],
+          ),
           value: _selectedMode,
           items: TransactionMode.values.map((mode) {
             return DropdownMenuItem<TransactionMode>(

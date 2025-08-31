@@ -10,7 +10,7 @@ enum TransactionType {
 enum TransactionMode {
   Cash,
   Card,
-  Upi,
+  UPI,
   BankTransfer,
   Cheque,
 }
@@ -26,11 +26,6 @@ enum TransactionCategory {
   Education,
   Savings,
   Investments,
+  Udhaar,
   Other,
-}
-
-/// Enum for contact types
-enum ContactType {
-  Lent,
-  Taken,
 }

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/contact.dart';
 import '../models/transaction.dart';
-import '../providers/contact_provider.dart';
 import '../providers/user_provider.dart';
 import 'package:intl/intl.dart';
 
@@ -13,32 +11,12 @@ class TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final contactProvider = Provider.of<ContactProvider>(context);
     final userProvider = Provider.of<UserProvider>(context);
     final colors = userProvider.currentTheme.colorScheme;
 
-    String byText;
-    if (transaction.contactId == null || transaction.contactId!.isEmpty) {
-      byText = "Self";
-    } else {
-      final contact = contactProvider.contacts.firstWhere(
-            (c) => c.id == transaction.contactId,
-        orElse: () => ContactModel(
-          id: 'unknown',
-          name: 'Unknown',
-          amount: 0.0,
-          type: 'Taken',
-          when: DateTime.now(),
-          settled: false,
-          transactionId: 'unknown',
-          userId: userProvider.currentUser?.id ?? '',
-        ),
-      );
-      byText = contact.name;
-    }
-
     // Format date
-    final dateText = DateFormat('dd MMM yyyy, hh:mm a').format(transaction.date);
+    final dateText = DateFormat('dd MMM yyyy').format(transaction.date);
+    final timeText = DateFormat('hh:mm a').format(transaction.date);
 
     // Amount color
     final amountColor =
@@ -62,39 +40,42 @@ class TransactionCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left info
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                transaction.description ?? 'No Description',
-                style: TextStyle(
-                  color: colors.onSurface,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  transaction.category ?? 'Uncategorized',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'By: $byText',
-                style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 14,
+                const SizedBox(height: 4),
+                Text(
+                  transaction.description?.isEmpty ?? true
+                      ? 'No description'
+                      : transaction.description!,
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                dateText,
-                style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 12,
+                const SizedBox(height: 2),
+                Text(
+                  '$dateText at $timeText • ${transaction.mode}',
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           // Amount
           Text(
-            (transaction.type == 'Income' ? '+' : '-') +
-                '\$${transaction.amount.toStringAsFixed(2)}',
+            '${transaction.type == 'Income' ? '+' : '-'}₹${transaction.amount.toStringAsFixed(2)}',
             style: TextStyle(
               color: amountColor,
               fontWeight: FontWeight.bold,

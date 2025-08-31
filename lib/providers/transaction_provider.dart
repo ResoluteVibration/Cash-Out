@@ -45,12 +45,15 @@ class TransactionProvider with ChangeNotifier {
     _transactionSubscription = _db
         .collection('transactions')
         .where('userId', isEqualTo: _userId)
-        .orderBy('date', descending: true)
         .snapshots()
         .listen((snapshot) {
       _transactions = snapshot.docs
           .map((doc) => TransactionModel.fromDoc(doc))
           .toList();
+
+      // Sort the transactions by date in the app code
+      _transactions.sort((a, b) => b.date.compareTo(a.date));
+
       notifyListeners();
     });
   }
@@ -65,6 +68,70 @@ class TransactionProvider with ChangeNotifier {
   Future<void> deleteTransaction(String transactionId) async {
     if (_userId == null) return;
     await _db.collection('transactions').doc(transactionId).delete();
+  }
+
+  // 🔹 Clear all transactions for the current user
+  Future<void> clearAllTransactions() async {
+    if (_userId == null) {
+      print('User ID is null. Cannot clear transactions.');
+      return;
+    }
+
+    try {
+      final batch = _db.batch();
+      final transactionsQuery = _db
+          .collection('transactions')
+          .where('userId', isEqualTo: _userId);
+
+      final querySnapshot = await transactionsQuery.get();
+
+      for (var doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+
+      _transactions = [];
+      notifyListeners();
+      print('All transactions for user $_userId have been cleared.');
+    } catch (e) {
+      print('Error clearing transactions: $e');
+    }
+  }
+
+  // 🔹 Delete transactions by a specific date range
+  Future<void> deleteTransactionsByDateRange(DateTime startDate, DateTime endDate) async {
+    if (_userId == null) {
+      print('User ID is null. Cannot clear transactions.');
+      return;
+    }
+
+    // Normalize dates to be at the start of the day and end of the day, respectively.
+    final startOfDay = DateTime(startDate.year, startDate.month, startDate.day);
+    final endOfDay = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59);
+
+    try {
+      final batch = _db.batch();
+      // Fetch all documents for the user and filter locally to avoid a composite index error.
+      final transactionsQuery = _db.collection('transactions').where('userId', isEqualTo: _userId);
+
+      final querySnapshot = await transactionsQuery.get();
+
+      for (var doc in querySnapshot.docs) {
+        final docDate = (doc['date'] as Timestamp).toDate();
+        // Check if the transaction date is within the specified range (inclusive).
+        if (docDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) && docDate.isBefore(endOfDay.add(const Duration(seconds: 1)))) {
+          batch.delete(doc.reference);
+        }
+      }
+
+      await batch.commit();
+
+      // The stream will automatically handle updating the local list
+      print('Transactions from $startOfDay to $endOfDay have been cleared for user $_userId.');
+    } catch (e) {
+      print('Error clearing transactions: $e');
+    }
   }
 
   // 🔹 Get today's transactions

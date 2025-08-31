@@ -1,6 +1,9 @@
+import 'package:cash_out/pages/profile/change_password.dart';
+import 'package:cash_out/pages/profile/update_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/user_provider.dart';
+import '../../../providers/transaction_provider.dart';
 import '../../authentication/login.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -100,14 +103,14 @@ class ProfilePage extends StatelessWidget {
           SliverList(
             delegate: SliverChildListDelegate(
               [
-
                 const SizedBox(height: 20),
                 _buildListItem(
                   context,
-                  title: 'Settings',
-                  icon: Icons.settings,
+                  title: 'Clear Transaction History',
+                  icon: Icons.auto_delete_outlined,
                   colors: colors,
                   enabled: isLoggedIn,
+                  onTap: () => _showClearHistoryOptions(context),
                 ),
                 if (!isLoggedIn)
                   _buildListItem(
@@ -123,16 +126,38 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
+                const SizedBox(height: 20),
                 if (isLoggedIn) ...[
 
-                  const SizedBox(height: 20),
+                  _buildListItem(
+                    context,
+                    title: 'Update Profile',
+                    icon: Icons.self_improvement,
+                    colors: colors,
+                    enabled: isLoggedIn,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UpdateProfilePage(),
+                      ),
+                    ),
+                  ),
+
                   _buildListItem(
                     context,
                     title: 'Change Password',
                     icon: Icons.lock,
                     colors: colors,
                     enabled: isLoggedIn,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChangePasswordPage(),
+                      ),
+                    ),
                   ),
+
+                  const SizedBox(height: 20),
 
                   _buildListItem(
                     context,
@@ -142,12 +167,78 @@ class ProfilePage extends StatelessWidget {
                     enabled: true,
                     onTap: userProvider.signOut,
                   ),
-                const SizedBox(height: 20),]
+                  const SizedBox(height: 20),]
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  void _showClearHistoryOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final colors = Theme.of(context).colorScheme;
+        final transactionProvider = context.read<TransactionProvider>();
+        return AlertDialog(
+          backgroundColor: colors.surface,
+          title: Text('Clear History', style: TextStyle(color: colors.onSurface)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildClearOption(context, 'Today', () async {
+                await transactionProvider.deleteTransactionsByDateRange(DateTime.now(), DateTime.now());
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Transactions for today cleared successfully!')),
+                );
+              }),
+              _buildClearOption(context, 'This Week', () async {
+                final now = DateTime.now();
+                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+                final endOfWeek = startOfWeek.add(const Duration(days: 6));
+                await transactionProvider.deleteTransactionsByDateRange(startOfWeek, endOfWeek);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Transactions for this week cleared successfully!')),
+                );
+              }),
+              _buildClearOption(context, 'This Month', () async {
+                final now = DateTime.now();
+                final startOfMonth = DateTime(now.year, now.month, 1);
+                final endOfMonth = DateTime(now.year, now.month + 1, 0);
+                await transactionProvider.deleteTransactionsByDateRange(startOfMonth, endOfMonth);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Transactions for this month cleared successfully!')),
+                );
+              }),
+              _buildClearOption(context, 'All Time', () async {
+                await transactionProvider.clearAllTransactions();
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('All transactions cleared successfully!')),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: colors.primary)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildClearOption(BuildContext context, String title, VoidCallback onTap) {
+    return ListTile(
+      title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+      onTap: onTap,
     );
   }
 

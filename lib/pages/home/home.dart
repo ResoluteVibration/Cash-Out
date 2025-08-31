@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/user_provider.dart';
 import '../../providers/transaction_provider.dart';
-import '../../providers/contact_provider.dart';
 import '../../widgets/transaction_card.dart';
 import 'options/got_money.dart';
 import 'options/profile.dart';
-import 'bottom/transaction_history.dart';
+import 'options/transaction_history.dart';
 import 'options/spent_money.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,12 +16,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   Widget _buildBalanceCard(BuildContext context, ColorScheme colors) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -30,11 +23,11 @@ class _HomePageState extends State<HomePage> {
     final amount = userProvider.currentUser?.amount ?? 0.0;
     final todayNetChange = transactionProvider.getTodayNetChange;
     final todayChangeText = todayNetChange >= 0
-        ? 'Today: +\$${todayNetChange.toStringAsFixed(2)}'
-        : 'Today: -\$${todayNetChange.abs().toStringAsFixed(2)}';
+        ? 'Today: +\₹${todayNetChange.toStringAsFixed(2)}'
+        : 'Today: -\₹${todayNetChange.abs().toStringAsFixed(2)}';
 
     return Container(
-      height: 220,
+      height: 230,
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
@@ -61,12 +54,12 @@ class _HomePageState extends State<HomePage> {
               'You Still Have',
               style: TextStyle(color: colors.primaryContainer, fontSize: 16),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 3),
             Text(
-              '\$${amount.toStringAsFixed(2)}',
+              '\₹${amount.toStringAsFixed(2)}',
               style: TextStyle(
                 color: colors.onPrimary,
-                fontSize: 40,
+                fontSize: 32,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -76,7 +69,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const Spacer(),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildActionButton(context, 'Got?', Icons.download, colors),
                 _buildActionButton(context, 'Spent', Icons.upload, colors),
@@ -90,7 +83,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildActionButton(BuildContext context, String text, IconData icon, ColorScheme colors) {
     return Container(
-      width: 150,
+      width: 100,
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
@@ -115,41 +108,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, ColorScheme colors) {
-    return BottomNavigationBar(
-      backgroundColor: colors.surface,
-      selectedItemColor: colors.primary,
-      unselectedItemColor: colors.onSurfaceVariant,
-      type: BottomNavigationBarType.fixed,
-      currentIndex: _selectedIndex,
-      onTap: (index) async {
-        setState(() {
-          _selectedIndex = index;
-        });
-        if (index == 2) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const TransactionHistoryPage()),
-          );
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.add, size: 36),
-          label: '',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.history),
-          label: '',
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer2<UserProvider, TransactionProvider>(
@@ -157,6 +115,10 @@ class _HomePageState extends State<HomePage> {
         final theme = userProvider.currentTheme;
         final colors = theme.colorScheme;
         final user = userProvider.currentUser;
+
+        final greetingText = user != null
+            ? 'Hi, ${user.firstname}'
+            : 'Hi, Log Yourself to Start Tracking.';
 
         final initials = user != null
             ? '${user.firstname.isNotEmpty ? user.firstname[0] : ''}${user.lastname.isNotEmpty ? user.lastname[0] : ''}'.toUpperCase()
@@ -170,22 +132,28 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: colors.surface,
             elevation: 8,
             shadowColor: colors.shadow.withOpacity(0.2),
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(
+                bottom: Radius.circular(30.0),
+              ),
+            ),
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Hero(
-                tag: 'user-avatar',
-                child: CircleAvatar(
-                  backgroundColor: colors.surfaceVariant,
-                  child: Text(
-                    initials,
-                    style: TextStyle(color: colors.onPrimary),
-                  ),
+              child: CircleAvatar(
+                backgroundColor: colors.surfaceVariant,
+                child: Text(
+                  initials,
+                  style: TextStyle(color: colors.onPrimary),
                 ),
               ),
             ),
             title: Text(
-              'Main Wallet',
-              style: TextStyle(color: colors.onSurface, fontSize: 18),
+              greetingText,
+              style: TextStyle(
+                color: colors.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             centerTitle: true,
             actions: [
@@ -208,13 +176,34 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 20),
                 _buildBalanceCard(context, colors),
                 const SizedBox(height: 20),
-                Text(
-                  'Recent Transactions',
-                  style: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recent Transactions',
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const TransactionHistoryPage()),
+                        );
+                      },
+                      child: Text(
+                        'See All',
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
                 Column(
@@ -224,23 +213,6 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-          ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.shadow.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: _buildBottomBar(context, colors),
           ),
         );
       },
