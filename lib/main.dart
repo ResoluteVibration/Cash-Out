@@ -1,43 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+
+import 'providers/user_provider.dart';
+import 'providers/transaction_provider.dart';
+import 'providers/contact_provider.dart';
+
 import 'pages/welcome.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  Future<FirebaseApp> _initializeFirebase() async {
-    return Firebase.initializeApp(
+  try {
+    await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    print('✅ Firebase initialized successfully');
+  } catch (e) {
+    print('❌ Firebase initialization failed: $e');
   }
+
+  runApp(const CashOutApp());
+}
+
+class CashOutApp extends StatelessWidget {
+  const CashOutApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Cash Out',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      debugShowCheckedModeBanner: false,
-      home: FutureBuilder(
-        future: _initializeFirebase(),
-        builder: (context, snapshot) {
-          // 🔥 If Firebase is still loading, we still show WelcomePage instantly
-          if (snapshot.connectionState == ConnectionState.done) {
-            return const WelcomePage();
-          } else {
-            // Firebase initializing in background, but don't delay the UI
-            return const WelcomePage();
-          }
-        },
-      ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (context) => TransactionProvider(context)),
+        ChangeNotifierProvider(create: (context) => ContactProvider()),
+      ],
+      child: const AppWithTheme(),
+    );
+  }
+}
+
+class AppWithTheme extends StatelessWidget {
+  const AppWithTheme({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Cash Out',
+          theme: userProvider.currentTheme,
+          home: const WelcomePage(),
+        );
+      },
     );
   }
 }
