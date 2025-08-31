@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../color schemes/blue.dart';
+import '../color schemes/red.dart';
+import '../color schemes/green.dart';
+import '../color schemes/purple.dart';
 import '../models/user.dart';
 import '../models/enums.dart';
 
@@ -11,7 +14,7 @@ class UserProvider with ChangeNotifier {
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
 
-  final ThemeData _currentTheme = buildBlueTheme();
+  final ThemeData _currentTheme = buildRedTheme();
   ThemeData get currentTheme => _currentTheme;
 
   UserProvider() {
