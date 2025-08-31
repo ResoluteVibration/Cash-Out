@@ -37,9 +37,7 @@ class _SpentMoneyPageState extends State<SpentMoneyPage> {
 
     if (user == null || amount <= 0 || _selectedMode == null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login to access these features.')),
-        );
+        _showCustomSnackBar('Please fill out all required fields and login.', isSuccess: false);
       }
       return;
     }
@@ -65,15 +63,11 @@ class _SpentMoneyPageState extends State<SpentMoneyPage> {
 
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Expense added successfully!')),
-        );
+        _showCustomSnackBar('Kharcha Ho Gaya!', isSuccess: true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add expense: ${e.toString()}')),
-        );
+        _showCustomSnackBar('Failed to add expense: ${e.toString()}', isSuccess: false);
       }
     } finally {
       if (mounted) {
@@ -82,6 +76,37 @@ class _SpentMoneyPageState extends State<SpentMoneyPage> {
         });
       }
     }
+  }
+
+  void _showCustomSnackBar(String message, {required bool isSuccess}) {
+    final colors = Theme.of(context).colorScheme;
+    final backgroundColor = isSuccess ? colors.primaryContainer : colors.errorContainer;
+    final textColor = isSuccess ? colors.onPrimaryContainer : colors.onErrorContainer;
+    final icon = isSuccess ? Icons.check_circle_outline : Icons.error_outline;
+    final iconColor = isSuccess ? colors.onPrimaryContainer : colors.onErrorContainer;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: iconColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: textColor),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: backgroundColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 
   @override

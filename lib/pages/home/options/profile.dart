@@ -110,7 +110,7 @@ class ProfilePage extends StatelessWidget {
                   icon: Icons.auto_delete_outlined,
                   colors: colors,
                   enabled: isLoggedIn,
-                  onTap: () => _showClearHistoryOptions(context),
+                  onTap: () => _showConfirmClearAllDialog(context),
                 ),
                 if (!isLoggedIn)
                   _buildListItem(
@@ -128,7 +128,6 @@ class ProfilePage extends StatelessWidget {
                   ),
                 const SizedBox(height: 20),
                 if (isLoggedIn) ...[
-
                   _buildListItem(
                     context,
                     title: 'Update Profile',
@@ -142,7 +141,6 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   _buildListItem(
                     context,
                     title: 'Change Password',
@@ -156,9 +154,7 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   _buildListItem(
                     context,
                     title: 'Logout',
@@ -167,7 +163,8 @@ class ProfilePage extends StatelessWidget {
                     enabled: true,
                     onTap: userProvider.signOut,
                   ),
-                  const SizedBox(height: 20),]
+                  const SizedBox(height: 20),
+                ],
               ],
             ),
           ),
@@ -176,58 +173,30 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _showClearHistoryOptions(BuildContext context) {
+  void _showConfirmClearAllDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         final colors = Theme.of(context).colorScheme;
-        final transactionProvider = context.read<TransactionProvider>();
         return AlertDialog(
           backgroundColor: colors.surface,
-          title: Text('Clear History', style: TextStyle(color: colors.onSurface)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildClearOption(context, 'Today', () async {
-                await transactionProvider.deleteTransactionsByDateRange(DateTime.now(), DateTime.now());
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Transactions for today cleared successfully!')),
-                );
-              }),
-              _buildClearOption(context, 'This Week', () async {
-                final now = DateTime.now();
-                final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-                final endOfWeek = startOfWeek.add(const Duration(days: 6));
-                await transactionProvider.deleteTransactionsByDateRange(startOfWeek, endOfWeek);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Transactions for this week cleared successfully!')),
-                );
-              }),
-              _buildClearOption(context, 'This Month', () async {
-                final now = DateTime.now();
-                final startOfMonth = DateTime(now.year, now.month, 1);
-                final endOfMonth = DateTime(now.year, now.month + 1, 0);
-                await transactionProvider.deleteTransactionsByDateRange(startOfMonth, endOfMonth);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Transactions for this month cleared successfully!')),
-                );
-              }),
-              _buildClearOption(context, 'All Time', () async {
-                await transactionProvider.clearAllTransactions();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('All transactions cleared successfully!')),
-                );
-              }),
-            ],
-          ),
+          title: Text('Confirm Delete?', style: TextStyle(color: colors.onSurface)),
+          content: Text('Are you sure you want to delete all transactions?',
+              style: TextStyle(color: colors.onSurfaceVariant)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text('Cancel', style: TextStyle(color: colors.primary)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the confirmation dialog
+                _clearAllTransactions(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colors.error,
+              ),
+              child: Text('Delete All', style: TextStyle(color: colors.onError)),
             ),
           ],
         );
@@ -235,10 +204,35 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildClearOption(BuildContext context, String title, VoidCallback onTap) {
-    return ListTile(
-      title: Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-      onTap: onTap,
+  Future<void> _clearAllTransactions(BuildContext context) async {
+    final transactionProvider = context.read<TransactionProvider>();
+    await transactionProvider.clearAllTransactions();
+    _showCustomSnackBar(context, 'All transactions cleared successfully!');
+  }
+
+  void _showCustomSnackBar(BuildContext context, String message) {
+    final colors = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: colors.onPrimaryContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: colors.onPrimaryContainer),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: colors.primaryContainer,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
     );
   }
 
