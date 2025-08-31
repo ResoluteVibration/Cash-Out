@@ -1,16 +1,13 @@
-# cash_out
+CashOut - Personal Finance Tracker
+CashOut is a modern, personal finance tracker built with Flutter that helps users manage their income, expenses, and settlements. This application leverages Firebase Firestore for real-time data storage and the Provider package for robust state management. A key feature is the ability for users to  a custom color scheme, personalizingselect their app experience from the start.
 
-A new Flutter project.
+Features
+User Authentication: Secure user registration and login with Firebase.
 
-## Getting Started
+Personal Finance Tracking: Easily record and track all income and expenses.
 
-This project is a starting point for a Flutter application.
+Real-time Balance Management: The user's balance is updated instantly with every transaction.
 
-A few resources to get you started if this is your first Flutter project:
+Data Persistence: All user data is stored securely in Firebase Firestore.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+State Management: The app uses the Provider package to efficiently manage and share application state.
